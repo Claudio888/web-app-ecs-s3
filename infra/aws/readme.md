@@ -66,8 +66,6 @@ Esta operação pode levar alguns minutos por conta de alguns recursos demorados
 
 Caso tenha um dominio, você provavelmente terá de alterar os nameservers em seu controlador(GoDaddy, domain.com, registrobr, hostgator), pois toda vez que a zona é recriada, os nameservers se modificam. Então copie as entradas do tipo NS, e configure-as em seu dominio. 
 
-![tf apply](/docs/terraform/apply.png "apply")
-
 Após criamos a infraestrutura, você pode acessar o console da AWS e verifiar se estão todos lá, e vai poder observar que o bucket s3 e o ecr estarão vazios, e o ecs sem nenhuma task rodando, isto acontece pois não fizemos nenhum deployment ainda. Bora então para a documentação a respeito, siga o link abaixo. 
 
 - [Deployment Backend](./infra/pipeline-scripts/backend/readme.md)
