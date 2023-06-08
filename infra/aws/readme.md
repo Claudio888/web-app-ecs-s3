@@ -68,4 +68,4 @@ Caso tenha um dominio, você provavelmente terá de alterar os nameservers em se
 
 Após criamos a infraestrutura, você pode acessar o console da AWS e verifiar se estão todos lá, e vai poder observar que o bucket s3 e o ecr estarão vazios, e o ecs sem nenhuma task rodando, isto acontece pois não fizemos nenhum deployment ainda. Bora então para a documentação a respeito, siga o link abaixo. 
 
-- [Deployment Backend](./infra/pipeline-scripts/backend/readme.md)
+- [Deployment Backend](/infra/pipeline-scripts/backend/readme.md)
