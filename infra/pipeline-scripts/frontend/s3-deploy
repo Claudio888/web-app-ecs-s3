@@ -1,0 +1,87 @@
+#!/bin/bash
+
+# Função para exibir a mensagem de ajuda
+function exibir_ajuda {
+    echo "Uso: $0 --bucket <nome do bucket> --files <arquivo ou arquivos a serem copiados> [--cloudfront <nome da origin do CloudFront a ser invalidada>] [--invalidationpath <caminho a ser invalidado>] [--profile <aws profile a ser usado para operação>]"
+    echo "Opções:"
+    echo "  --bucket              Nome do bucket do S3"
+    echo "  --files               Arquivo(s) a ser(em) copiado(s) para o S3"
+    echo "  --cloudfront          (Opcional) ID do Cloudfront"
+    echo "  --invalidationpath    (Opcional) Caminho a ser invalidado no CloudFront (padrão: /*), colocar entre aspas"
+    echo "  --profile             (Opcional) Perfil AWS a ser usado para a operação"
+    echo "  --help                Exibe esta mensagem de ajuda"
+}
+
+# Verificar se o AWS CLI está instalado
+if ! command -v aws &> /dev/null; then
+    echo "O AWS CLI não está instalado. Por favor, instale-o antes de executar este script."
+    exit 1
+fi
+
+# Verificar se o número de argumentos é igual a zero ou se foi passado o argumento --help
+if [[ $# -eq 0 || "$1" == "--help" ]]; then
+    exibir_ajuda
+    exit 0
+fi
+
+# Variáveis para armazenar os valores dos argumentos
+bucket=""
+files=""
+cloudfront=""
+invalidationpath="/*"
+profile="default"
+
+# Faz o parse dos argumentos
+while [[ $# -gt 0 ]]; do
+    key="$1"
+
+    case $key in
+        --bucket)
+            bucket="$2"
+            shift 2
+            ;;
+        --files)
+            files="$2"
+            shift 2
+            ;;
+        --cloudfront)
+            cloudfront="$2"
+            shift 2
+            ;;
+        --invalidationpath)
+            invalidationpath="$2"
+            shift 2
+            ;;
+        --profile)
+            profile="$2"
+            shift 2
+            ;;
+        *)
+            echo "Opção inválida: $key"
+            exibir_ajuda
+            exit 1
+            ;;
+    esac
+done
+
+# Verificar se todos os argumentos obrigatórios foram fornecidos
+if [[ -z $bucket || -z $files || -z $profile ]]; then
+    echo "Todos os argumentos obrigatórios devem ser fornecidos."
+    exibir_ajuda
+    exit 1
+fi
+
+# Exportar o perfil AWS para a variável de ambiente
+export AWS_PROFILE=$profile
+
+# Realizar o upload dos arquivos para o S3
+echo "Realizando upload dos arquivos para o S3..."
+aws s3 sync $files s3://$bucket
+
+# Verificar se a opção --cloudfront foi fornecida
+if [[ -n $cloudfront ]]; then
+
+      echo Invalidating cloudfront cache
+      aws cloudfront create-invalidation --distribution-id $cloudfront --paths "$invalidationpath"
+
+fi

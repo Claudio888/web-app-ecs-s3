@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Função para exibir a mensagem de ajuda
+function show_help {
+    echo "Uso: ./build-backend --imagename <nome da imagem> --version <versão da imagem> --path <caminho do Dockerfile> --reponame <nome do repositório no ECR>"
+    echo ""
+    echo "Parâmetros:"
+    echo "  --imagename    Nome da imagem Docker a ser construída"
+    echo "  --version      Tag que será atribuída à imagem Docker"
+    echo "  --path         Caminho onde o Dockerfile está localizado"
+    echo "  --reponame     Nome do repositório no ECR para enviar a imagem"
+    echo ""
+}
+
+# Função para fazer o build da imagem Docker
+function build_image {
+    # Verifica se o caminho do Dockerfile existe
+    if [ ! -f "$path/Dockerfile" ]; then
+        echo "Erro: O caminho $path não existe ou não contém o Dockerfile."
+        exit 1
+    fi
+
+    # Constrói a imagem Docker
+    docker build -t "$imagename:$version" "$path"
+}
+
+# Função para fazer o upload da imagem Docker para o ECR
+function upload_image {
+    # Verifica se o AWS CLI está instalado
+    if ! command -v aws &> /dev/null; then
+        echo "Erro: O AWS CLI não está instalado."
+        exit 1
+    fi
+
+    # Obtém a URL completa do ECR com base no nome do repositório
+    ecr_url=$(aws ecr describe-repositories --repository-names "$reponame" --query "repositories[0].repositoryUri" --output text)
+    if [ -z "$ecr_url" ]; then
+        echo "Erro: O repositório $reponame não foi encontrado no ECR."
+        exit 1
+    fi
+
+    # Faz login no ECR
+    aws ecr get-login-password --region $region | docker login --username AWS --password-stdin "$ecr_url"
+
+    # Envia a imagem Docker para o ECR
+    docker tag "$imagename:$version" "$ecr_url:$version"
+    docker push "$ecr_url:$version"
+    docker tag "$imagename:$version" "$ecr_url:latest"
+    docker push "$ecr_url:latest"
+}
+
+# Verifica se nenhum parâmetro foi fornecido
+if [ $# -eq 0 ]; then
+    show_help
+    exit 1
+fi
+
+# Processa os argumentos
+while [[ $# -gt 0 ]]; do
+    key="$1"
+    case $key in
+        --imagename)
+            imagename="$2"
+            shift
+            ;;
+        --version)
+            version="$2"
+            shift
+            ;;
+        --path)
+            path="$2"
+            shift
+            ;;
+        --region)
+            region="$2"
+            shift
+            ;;
+        --reponame)
+            reponame="$2"
+            shift
+            ;;
+        *)
+            # Parâmetro desconhecido
+            echo "Erro: Parâmetro desconhecido: $key"
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Verifica se todos os parâmetros obrigatórios foram fornecidos
+if [ -z "$imagename" ] || [ -z "$version" ] || [ -z "$path" ] || [ -z "$reponame" ]; then
+    echo "Erro: Todos os parâmetros são obrigatórios."
+    show_help
+    exit 1
+fi
+
+# Executa o build da imagem Docker
+build_image
+upload_image
